@@ -31,8 +31,13 @@ library(corrplot)
 library(car)
 library(knitr)
 library(readxl)
+library("tools")
+
 
 opts_chunk$set(tidy.opts=list(width.cutoff=70),tidy=FALSE) 
+
+source(file = here("lib","Utils.R"))
+
 ```
 
 ```{r child = file.path(here(), "rmd", "AutoMpgUpdate1.Rmd")}

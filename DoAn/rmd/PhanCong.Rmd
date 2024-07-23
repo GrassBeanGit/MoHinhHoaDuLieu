@@ -1,0 +1,15 @@
+---
+title: "Phân công việc"
+
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+# ĐỖ THỊ THANH THẢO - 23C23009   
+- Làm bộ dữ liệu: Csm, Fish Market, Chocolate Bar Rating
+- Tổng hợp báo cáo
+
+# NGUYỄN BÍCH TRÂM - 23c23010   
+- Làm bộ dữ liệu: IslanderOrg, Heart Disease, Chocolate Bar Rating
+- Tìm dữ liệu

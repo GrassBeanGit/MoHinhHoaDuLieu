@@ -1,0 +1,37 @@
+---
+title: "Teamplate"
+
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# Bộ dữ liệu: CSM
+
+## MÔ TẢ DỮ LIỆU
+
+## ĐỌC DỮ LIỆU
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+
+csmOrg = docDuLieu("data","csm.xlsx")
+islanderOrg = docDuLieu("data","Islander_data.csv")
+
+(dim(csmOrg))
+```
+
+## TIỀN XỬ LÝ DỮ LIỆU
+### Kiểm tra dữ liệu
+**Nhận xét**
+
+### Loại bỏ dữ liệu khuyết
+
+### Loại bỏ outlier
+
+### Loại bỏ dữ liệu trùng
+
+### Chuẩn hóa dữ liệu
+
+### Chia dữ liệu
+
+
