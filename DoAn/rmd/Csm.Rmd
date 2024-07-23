@@ -1,0 +1,35 @@
+---
+title: "Csm"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# Bộ dữ liệu: CSM
+
+## MÔ TẢ DỮ LIỆU
+
+## ĐỌC DỮ LIỆU
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+
+csmOrg = read_excel(here("data", "csm.xlsx"))
+(dim(csmOrg))
+```
+
+## TIỀN XỬ LÝ DỮ LIỆU
+### Kiểm tra dữ liệu
+**Nhận xét**
+
+### Loại bỏ dữ liệu khuyết
+
+### Loại bỏ outlier
+
+### Loại bỏ dữ liệu trùng
+
+### Chuẩn hóa dữ liệu
+
+### Chia dữ liệu
+
+
+

@@ -1,0 +1,45 @@
+
+---
+title: "Đồ Án Nhóm 1"
+author: "Thanh Thảo - Bích Trâm"
+date: "2024-07-23"
+site: bookdown::bookdown_site
+output:
+  pdf_document: 
+    latex_engine: xelatex
+    toc: true
+    highlight: zenburn
+  bookdown::pdf_document2:
+    toc: yes
+  word_document:
+    toc: true
+geometry: margin=2cm
+---
+
+
+```{r setup, include = FALSE, echo = FALSE, eval = TRUE}
+library(here)
+library(rmarkdown)
+library(tidyverse)
+library(MASS)
+library(leaps)
+library(GGally)
+library(caret)
+library(ggplot2)
+library(ggfortify)
+library(corrplot)
+library(car)
+library(knitr)
+library(readxl)
+
+opts_chunk$set(tidy.opts=list(width.cutoff=70),tidy=FALSE) 
+```
+
+```{r child = file.path(here(), "rmd", "AutoMpgUpdate1.Rmd")}
+```
+
+```{r child = file.path(here(), "rmd", "BaoHiem.Rmd")}
+```
+
+```{r child = file.path(here(), "rmd", "Csm.Rmd")}
+```

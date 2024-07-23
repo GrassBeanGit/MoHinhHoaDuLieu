@@ -1,0 +1,253 @@
+---
+title: "AutoMpg"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# ĐỌC DỮ LIỆU   
+
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+
+autoMpgDataOrg = read.csv(here("data", "auto-mpg_data.csv"), header=FALSE)
+
+autoMpgDataOrg = rename(autoMpgDataOrg, 
+                        "mpg"="V1", "cylinders" = "V2", "displacement" = "V3",   
+                        "horsepower" = "V4", "weight" = "V5", "acceleration" = "V6",   
+                        "model year" = "V7", "origin" = "V8", "car name" = "V9")  
+
+rowAmount = dim(autoMpgDataOrg)[1]  
+```
+
+# MÔ TẢ DỮ LIỆU   
+V1 - mpg: continuous   
+V2 - cylinders: multi-valued discrete - xi lanh   
+V3 - displacement: continuous - dung tích xi lanh   
+V4 - horsepower: continuous - mã lực   
+V5 - weight: continuous - trọng lượng   
+V6 - acceleration: continuous - tăng tốc   
+V7 - model year: multi-valued discrete - năm sx   
+V8 - origin: multi-valued discrete - nguồn gốc   
+V9 - car name: string (unique for each instance) - tên xe   
+
+# KIỂM TRA DỮ LIỆU   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+str(autoMpgDataOrg)
+unique(autoMpgDataOrg$horsepower)
+isTRUE(duplicated(autoMpgDataOrg))
+```
+## Nhận xét:   
+- horsepower: không đúng kiểu dữ liệu. Trong mô tả dữ liệu là biến liên tục, trong data là kiểu chuỗi  
+- horsepower: có dữ liệu bị thiếu (?)  
+- không có dòng dữ liệu trùng  
+
+# LÀM SẠCH DỮ LIỆU   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+missingCounter = count(filter(autoMpgDataOrg, autoMpgDataOrg$horsepower == "?"))  
+autoMpgData = subset(autoMpgDataOrg, autoMpgDataOrg$horsepower!="?")[,-9]  
+
+autoMpgData$horsepower = as.integer(autoMpgData$horsepower)  
+autoMpgData$`model year` = as.factor(autoMpgData$`model year`)  
+autoMpgData$origin = as.factor(autoMpgData$origin)  
+```
+## Nhận xét:  
+- Chuyển kiểu dữ liệu của biến horsepower sang integer do horsepower là biến liên tục nhưng trong bộ dữ liệu là kiểu chuỗi   
+- Các biến "model year", "origin" là biến định tính nên chuyển sang dạng factor   
+- Có 1 biến "car name" không có giá trị dử dụng trong thống kê => loại biến "car name" ra khỏi bộ dữ liệu  
+
+# KIỂM TRA OUTLIER   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+drawBoxPlot <- function(){
+  ouliersIndexList = list()  
+  
+  for (i in 1:length(autoMpgData)){
+    if(names(autoMpgData[i]) != "model year" && names(autoMpgData[i]) != "origin"){   
+      boxPlot =    
+        ggplot(autoMpgData, aes(x="", y=autoMpgData[[i]])) +    
+        stat_boxplot(geom="errorbar", width=0.2) +    
+        xlab("") +   
+        ylab("") +   
+        ggtitle(paste("OUTLIERS OF", toupper(names(autoMpgData[i])))) +    
+        geom_boxplot(fill="skyblue", outlier.colour = "red")   
+      
+      print(boxPlot)   
+    }
+  }
+}
+
+drawBoxPlot()
+
+findOutliersIndexList <- function(){
+  outlierIndexesList = list()
+  outlierVariableCounter = 0
+  for (i in 1:length(autoMpgData)){
+    if(names(autoMpgData[i]) != "model year" && names(autoMpgData[i]) != "origin"){
+      quantitleValue = quantile(autoMpgData[[i]])
+      upperValue = quantitleValue[4] + (quantitleValue[4]-quantitleValue[2])*1.5
+      lowerValue = quantitleValue[2] - (quantitleValue[4]-quantitleValue[2])*1.5
+      
+      indexOutlier = which(autoMpgData[[i]] > upperValue |   
+                             autoMpgData[[i]] < lowerValue)   
+      if(length(indexOutlier) > 0){  
+        outlierVariableCounter = outlierVariableCounter + 1  
+        outlierIndexesList = append(outlierIndexesList, indexOutlier)  
+      }
+    }
+  }
+
+  return(outlierIndexesList)
+}
+
+findDuplicatedOutlierRow <- function(){
+  outliersIndexesList = findOutliersIndexList()  
+  
+  duplicatedOutlierRow = list()  
+  for(i in 2:length(outliersIndexesList)){  
+    for(j in 1:(i-1)){  
+      if(outliersIndexesList[i] %in% outliersIndexesList[j]){  
+        duplicatedOutlierRow =   
+          append(duplicatedOutlierRow, outliersIndexesList[i])
+      }
+    }
+  }
+  
+  return(duplicatedOutlierRow)
+}
+
+duplicatedOutlierRow = findDuplicatedOutlierRow()
+totalRemovingRow = length(duplicatedOutlierRow) + missingCounter
+removingPercentage = round(totalRemovingRow*100/rowAmount, 2)
+
+autoMpgData = autoMpgData[-as.vector(unlist(duplicatedOutlierRow)),]
+```   
+## Nhận xét:  
+- Có `r missingCounter` dòng dữ liệu có biến mã lực bị thiếu giá trị. Xử lý bằng cách thay giá trị thiếu bằng trung vị hoặc xóa dòng các dòng dữ liệu. Do số lượng dòng thiếu dữ liệu khá nhỏ so với bộ dữ liệu nên xóa dữ liệu cũng không ảnh hưởng đến kết quả xây dựng mô hình   
+- Có `r length(duplicatedOutlierRow)` ví trí dòng mà các biến có giá trị ngoại lai đều có giá trị nằm ở dòng đó    
+- Tổng số lượng dòng cần xóa chiếm `r paste(totalRemovingRow,"*100/",rowAmount,"=",removingPercentage,"%")` bao gồm các dòng dữ liệu bị khuyết và dòng dữ liệu có giá trị ngoại lai ở các biến. Vị trí các dòng đã xóa là: `r duplicatedOutlierRow` , `r which(autoMpgDataOrg$horsepower == "?")`  
+
+# DỮ LIỆU SAU KHI LÀM SẠCH   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+drawBoxPlot <- function(){
+  ouliersIndexList = list()
+  
+  for (i in 1:length(autoMpgData)){
+    if(names(autoMpgData[i]) != "model year" && names(autoMpgData[i]) != "origin"){  
+      boxPlot =   
+        ggplot(autoMpgData, aes(x="", y=autoMpgData[[i]])) +   
+        stat_boxplot(geom="errorbar", width=0.2) +   
+        xlab("") +  
+        ylab("") +  
+        ggtitle(paste("OUTLIERS OF", toupper(names(autoMpgData[i])))) +   
+        geom_boxplot(fill="lavender", outlier.colour = "red")   
+      
+      print(boxPlot)   
+    }
+  }
+}
+
+drawBoxPlot()
+```
+
+# CHIA DỮ LIỆU   
+- 80% dữ liệu được chọn ngẫu nhiên dùng để xây dựng mô hình, 20% dữ liệu còn lại dùng để kiểm tra lại mô hình
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+set.seed(123)
+trainingSamples = autoMpgData$mpg  %>%  createDataPartition(p = 0.8, list = FALSE)
+trainingData  = autoMpgData[trainingSamples, ]
+testData = autoMpgData[-trainingSamples, ]
+```
+
+# KIỂM TRA TƯƠNG QUAN   
+- Hai biến "model year", "origin" là hai biến định tính nên không sử dụng để kiểm tra tính tương quan
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+cor(trainingData[,1:6])
+corrplot.mixed(cor(trainingData[,1:6]), order = 'AOE')
+```   
+## Nhận xét:   
+- Các biến có mối tương quan khá mạnh với nhau. Phần lớn đều trên 0.7 nên ta cần phải kiểm tra xem các biến có xảy ra hiện tượng đa cộng tuyến hay không
+
+# KIỂM TRA ĐA CỘNG TUYẾN   
+## Mô hình đầy đủ biến  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model = lm(mpg~., data = trainingData)
+vif(model)
+```
+### Nhận xét:  
+- Có hiện tượng đa cộng tuyến xảy ra, mạnh nhất ở biến DISPLACEMENT (GVIF = 24.789802) nên ta loại biến DISPLACEMENT ra khỏi mô hình   
+
+# Mô hình không có biến DISPLACEMENT   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model2 = lm(mpg~cylinders+horsepower+weight+acceleration+`model year`+origin, data = trainingData)
+vif(model2)
+```
+### Nhận xét:   
+- Vẫn còn hiện tượng đa cộng tuyến xảy ra, mạnh nhất ở WEIGHT (GVIF = 11.547966) nên ta loại WEIGHT ra khỏi mô hình  
+
+# Mô hình không có biến DISPLACEMENT, WEIGHT  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model3 = lm(mpg~cylinders+horsepower+acceleration+`model year`+origin, data = trainingData)
+vif(model3)
+```
+### Nhận xét: 
+- Vẫn có thể còn hiện tượng đa cộng tuyến xảy ra ở HORSEPOWER (GVIF = 5.775981) nên ta loại HORSEPOWER ra khỏi mô hình
+
+# Mô hình không có biến DISPLACEMENT, WEIGHT, HORSEPOWER   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model4 = lm(mpg~cylinders+acceleration+`model year`+origin, data = trainingData)
+vif(model4)
+```
+
+### Nhận xét:   
+- Tất cả các giá trị GVIF đều nhỏ hơn 5 nên ta dừng kiểm tra đa cộng tuyến   
+
+# XÂY DỰNG MÔ HÌNH  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(model4)
+```
+## Nhận xét:   
+- Các biến acceleration, model year71, model year72, model year74, model year75, model year76 không có ý nghĩa trong thống kê (vì Pr > 0.05) nên ta không đưa vào mô hình
+
+\newpage
+# SO SÁNH MÔ HÌNH XÂY DỰNG VỚI MÔ HÌNH TẠO BẰNG PHƯƠNG PHÁP STEPWISE
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+modelComparison = stepAIC(model, direction = "both",trace = FALSE)
+summary(modelComparison)
+
+anova(model4, modelComparison)
+
+```
+## Nhận xét:   
+1. Mô hình 2 có Pr < 0.05 nên ta chọn mô hinh 2: mpg ~ displacement + weight + model year + origin   
+2. Ở mô hình 2 có:  
++ Các biến horsepower, model year71, model year72, model year73, model year74, model year75, model year76 không có nhiều ý nghĩa trong thống kê nên ta không đưa vào mô hình  
++ Adjusted R-squared = 0.8457 => giải thích được 83.87% sự phụ thuộc của biến mpg vào các biến displacement, weight, model year77, model year78, model year79, model year80, model year81, model year82, origin2, origin3   
+3. Sự phụ thuộc của mpg vào các biến theo tỉ lệ như sau:   
+     mpg = 37.4138347 + 0.0133566\*(displacement) -0.0061908\*(weight) + 3.2765532\*(model year77) +    
+           3.1877580\*(model year78) + 5.1919267\*(model year79) + 9.2282220\*(model year80) +    
+           6.5869794\*(model year81) + 8.9562255\*(model year82) + 2.6666858\*(origin2) +   
+           2.5282001\*(origin3)   
+         
+## TÓM LẠI:   
++ Mức độ hao xăng phụ thuộc vào dung tích xi lanh, trọng lượng xe, năm sản xuất và nguồn gốc xe   
++ Khi trọng lượng xe tăng 1 đơn vị thì mức độ hao xăng giảm 0.0056894 đơn vị   
++ Với những xe sản xuất từ năm 1971 đến 1976 không ảnh hưởng đến mức độ hao xăng    
++ Những xe sản xuất từ năm 1977 đến 1982 có ảnh hưởng đến mức độ hao xăng theo tỉ lệ tương ứng: 3.2765532, 3.1877580, 5.1919267, 9.2282220, 6.5869794, 8.9562255   
++ Khi nguồn gốc xe là 2 hoặc 3 cũng ảnh hưởng đến mức độ hao xăng, tỉ lệ ảnh hưởng tương ứng là 2.0228451 và 1.7243036. Những xe có nguồn gốc là 1 thì không ảnh hưởng   
+
+# KIỂM TRA PHẦN DƯ
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+residus = residuals(modelComparison)
+shapiro.test(residus)
+```
+## Nhận xét:   
+- p-value = 0.0005727 < 0.05 => phần dư có phân phối chuẩn nên ta không cần phải xử lý phần dư để đưa về dạng chuẩn
+
+# DỰ ĐOÁN
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+predictions = modelComparison %>% predict(testData)
+rmse = RMSE(predictions, testData$mpg)
+r2 = R2(predictions, testData$mpg)
+```
++ Giá trị của RMSE = `r rmse` cho biết độ lệch trung bình giữa các giá trị dự đoán và các giá trị thực tế là `r rmse`  
++ Giá trị của R2 = `r r2` cho biết `r round(r2*100, 2)`% biến thiên của biến phụ thuộc có thể được giải thích bởi các biến độc lập được sử dụng trong mô hình. Từ đây cho thấy mô hình phù hợp chặt chẽ với dữ liệu.
