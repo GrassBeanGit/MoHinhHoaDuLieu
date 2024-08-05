@@ -6,30 +6,309 @@ output:
 ---
 
 \newpage
-# Bộ dữ liệu: CSM
+# Bộ dữ liệu: CSM ==========
 
-## MÔ TẢ DỮ LIỆU
+## MÔ TẢ DỮ LIỆU  
+Bộ dữ liệu CSM (Conventional and Social Media Movies) cung cấp một số thuộc tính của phim ảnh lấy từ nguồn UCI Machine Learning Repository. Bộ dữ liệu gồm 231 quan trắc trên 14 biến:  
 
+1. "Movie": tên phim    
+2. "Year": năm phát hành   
+3. "Ratings": điểm đánh giá   
+4. "Genre": thể loại phim   
+5. "Gross": tổng doanh thu  
+6. "Budget": tổng chi phí  
+7. "Screens": số rạp chiều  
+8. "Sequel": phần phim  
+9. "Sentiment": ý kiến khán giả  
+10. "Views": số lượt xem  
+11. "Likes": số lượt thích  
+12. "Dislikes": số lượt chê  
+13. "Comments": số bình luận  
+14. "Aggregate Followers": số người theo dõi  
+  
+## YÊU CẦU   
+
+- (a) Tiền xử lý dữ liệu nếu cần  
+- (b) Chia bộ dữ liệu làm 2 phần: mẫu huấn luyện (training dataset) và mẫu kiểm tra (validation dataset)  
+- (c) Chọn mô hình tốt nhất giải thích cho biến phụ thuộc là biến doanh thu "Gross"thông qua việc chọn lựa các biến độc lập phù hợp trong các biến còn lại từ mẫu huấn luyện. Cần trình bày từng bước phương pháp chọn, tiêu chuẩn chọn mô hình, lý do chọn phương pháp đó.   
+Kiểm tra các giả định (giả thiết) của mô hình (nếu giả thiết không thoả, có thể biến đổi "transformation"biến (bằng phương pháp Box-Cox, ...), hoặc có thể dùng phương pháp phi tham số, để giải quyết vấn đề này). Nêu ý nghĩa của mô hình đã chọn.   
+- (d) Dự báo (Prediction): sử dụng mẫu kiểm tra (validation dataset) và dựa vào mô hình tốt nhất được chọn trên đưa số liệu dự báo cho biến phụ thuộc "Gross".   
+- (e) So sánh kết quả dự báo với giá trị thực tế của "Gross". Rút ra nhận xét?   
+- (f) Có thể đề xuất những phương pháp cải tiến /phân tích khác có thể cho kết quả tốt hơn nếu có thể.  
+
+\newpage
 ## ĐỌC DỮ LIỆU
 ```{r include = TRUE, echo = TRUE, eval = TRUE}
-
-csmOrg = read_excel(here("data", "csm.xlsx"))
-(dim(csmOrg))
+csmOrg = docDuLieu("data","csm.xlsx")
 ```
 
 ## TIỀN XỬ LÝ DỮ LIỆU
-### Kiểm tra dữ liệu
-**Nhận xét**
-
-### Loại bỏ dữ liệu khuyết
-
-### Loại bỏ outlier
-
 ### Loại bỏ dữ liệu trùng
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+isTRUE(duplicated(csmOrg))
+```
 
-### Chuẩn hóa dữ liệu
+**Nhận xét**   
 
-### Chia dữ liệu
+- Không có dữ liệu trùng   
 
+### Loại bỏ biến không có giá trị phân tích  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(csmOrg)
+csmData = csmOrg[,-1]
+```
 
+**Nhận xét**   
 
+- Biến "Movie" (tên phim) không ảnh hưởng đến quá trình phân tích nên ta loại ra khỏi bộ dữ liệu   
+
+### Chuyển đổi kiểu dữ liệu  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+str(csmOrg)
+
+csmData$Year = as.factor(csmData$Year)
+csmData$Genre = as.factor(csmData$Genre)
+csmData$Sequel = as.factor(csmData$Sequel)
+```
+
+**Nhận xét**   
+
+- Biến "Year" (năm phát hành) là biến định tính => ta chuyển sang dạng factor  
+- Biến "Genre" (thể loại phim) là biến định tính => ta chuyển sang dạng factor    
+- Biến "Sequel" (phần phim) là biến định tính => ta chuyển sang dạng factor   
+
+### Loại bỏ dữ liệu khuyết  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+anyNA(csmData)
+miss_var_table(csmData)
+colSums(is.na(csmData))
+budgetMissing = n_miss(csmData$Budget)
+screensMissing = n_miss(csmData$Screens)
+aggregateFollowersMissing= n_miss(csmData$`Aggregate Followers`)
+vis_dat(csmData)
+vis_miss(csmData)
+missingObservations = sum(!complete.cases(csmData))
+
+missCases = miss_case_table(csmData)
+missingPercentage = round(pct_miss_case(csmData), 2)
+
+csmData = subset(csmData, Screens != "NA" | `Aggregate Followers` != "NA")
+
+marginplot(csmOrg[,c("Aggregate Followers", "Screens")])
+marginplot(csmData[,c("Aggregate Followers", "Screens")])
+```
+
+**Nhận xét**   
+
+- Biến "Budget" có `r budgetMissing` dữ liệu khuyết (NA)  
+- Biến "Screens" có `r screensMissing` dữ liệu khuyết (NA)   
+- Biến "Aggregate Followers" có `r aggregateFollowersMissing`` dữ liệu khuyết (NA)  
+- Bộ dữ liệu có `r missingObservations` quan sát bị khuyết, chiếm `r missingPercentage`% dữ liệu. Trong đó, có `r missCases[3,2]` dòng dữ liệu bị khuyết `r missCases[3,1]` biến, `r missCases[2,2]` dòng dữ liệu bị khuyết `r missCases[2,1]` biến (biến bị khuyết dữ liệu có cùng quan sát sẽ tính là 1 quan sát bị khuyết, ví dụ: dòng dữ liệu của phim "The Devil's Hand", có dữ liệu khuyết ở 2 biến "Screens", "Aggregate Followers" ta tính 1 quan sát bị khuyết) => loại bỏ 2 dòng cùng có 2 biến bị khuyết dữ liệu   
+- Từ 2 biểu đồ Margin trước và sau khi loại bỏ 2 dòng dữ liệu khuyết, ta thấy, sau khi loại bỏ 2 dòng dữ liệu khuyết không ảnh hưởng đến sự phân bố dữ liệu   
+
+### Thay thế dữ liệu khuyết  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(csmData$Budget)
+summary(csmData$Screens)
+summary(csmData$`Aggregate Followers`)
+
+csmData = mutate(csmData, Budget = case_when(is.na(Budget) ~ median(Budget, na.rm = TRUE),   
+                                             TRUE ~ Budget))
+csmData = mutate(csmData, Screens = case_when(is.na(Screens) ~ median(Screens, na.rm = TRUE),   
+                                              TRUE ~ Screens))
+csmData = mutate(csmData, `Aggregate Followers` =   
+                   case_when(is.na(`Aggregate Followers`) ~    
+                               median(`Aggregate Followers`, na.rm = TRUE), 
+                             TRUE ~ `Aggregate Followers`))
+```
+
+**Nhận xét**   
+
+- Biến "Budget" có biên độ dao động từ 70.000 đến 250.000.000 => để không ảnh hưởng đến phân bố của dữ liệu, ta sử dụng giá trị của Median thay thế các giá trị khuyết   
+- Biến "Screens" có biên độ dao động từ 2 đến 4.324 => để không ảnh hưởng đến phân bố của dữ liệu, ta sử dụng giá trị của Median thay thế các giá trị khuyết   
+- Biến "Aggregate Followers" có biên độ dao động từ 1.066 đến 31.030.000 => để không ảnh hưởng đến phân bố của dữ liệu, ta sử dụng giá trị của Median thay thế các giá trị khuyết   
+
+\newpage
+### Quy tâm dữ liệu
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+csmQuantitativeData = csmData[,c(-1, -3, -7)]
+boxplot(csmQuantitativeData)
+apply(csmQuantitativeData, 2, mean)
+apply(csmQuantitativeData, 2, sd)
+apply(csmQuantitativeData, 2, range)
+
+csmStdData = as.data.frame(scale(csmQuantitativeData, scale = TRUE))
+boxplot(csmStdData)
+```
+
+**Nhận xét**   
+
+- Từ BoxPlot, ta thấy range của biến "Gross", "Bugdet" khá lớn so với các biến khác   
+- Trung bình, độ lệch chuẩn của các biến không tương đồng. Do đó, ta cần quy tâm dữ liệu. Đưa dữ liệu có trung bình của biến về 0, phương sai về 1  
+
+\newpage
+### Loại bỏ outlier
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+boxplot(csmStdData)
+
+duplicatedOutlierIndex = list()
+
+for(i in 1:length(csmStdData)){
+  if(is.integer(which(csmStdData[i] < -3))){
+    duplicatedOutlierIndex = append(duplicatedOutlierIndex, which(csmStdData[i] < -3)) 
+  }
+  
+  if(is.integer(which(csmStdData[i] > 5))){
+    duplicatedOutlierIndex = append(duplicatedOutlierIndex, which(csmStdData[i] > 5))
+  }
+}
+
+duplicatedOutlierIndex = unique(duplicatedOutlierIndex)
+duplicatedOutlierAmount = length(duplicatedOutlierIndex)
+duplicatedOutlierPercentage = round(duplicatedOutlierAmount/dim(csmStdData)[1]*100, 2)
+
+csmFinalData = data.frame(csmStdData, csmData[,c(1, 3, 7)])[c(-unlist(duplicatedOutlierIndex)), ]
+```
+
+**Nhận xét**   
+
+- Sau khi quy tâm dữ liệu, ta thấy biến "Ratings", "Gross", "Sentiment", "Views", "Likes", "Dislikes", "Comment" có outlier rõ ràng so với các biến còn lại   
+- Có tổng cộng `r duplicatedOutlierAmount` dòng mà một trong các biến trên cùng có outlier hoặc outlier rõ ràng, chiếm `r duplicatedOutlierPercentage`% dữ liệu   
+- Các dòng cần loại khỏi bộ dữ liệu là: `r duplicatedOutlierIndex`    
+
+\newpage
+## CHIA DỮ LIỆU
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+set.seed(123)
+trainingSamples = csmFinalData$Gross  %>%  createDataPartition(p = 0.8, list = FALSE)
+trainingData  = csmFinalData[trainingSamples, ]
+validationData = csmFinalData[-trainingSamples, ]
+
+```
+
+## XÂY DỰNG MÔ HÌNH   
+### Kiểm tra tương quan
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+cor(trainingData[,1:10])
+corrplot.mixed(cor(trainingData[,1:10]), order = 'AOE')
+```
+
+**Nhận xét**  
+
+- Biến "Views" tương quan mạnh với biến "Dislikes", "Comments", "Likes"   
+- Biến "Dislike" tương quan mạnh với biến "Comments", "Likes"   
+- Biến "Comments" tương quan mạnh với biến "Likes"  
+- Biến "Budget" tương quan mạnh với biến "Gross"   
+=> cần kiểm tra các biến có xảy ra hiện tượng đa cộng tuyến không   
+
+### Kiểm tra đa cộng tuyến  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model = lm(Gross~., data = trainingData)
+vif(model)
+
+model2 = lm(Gross~. -Likes, data = trainingData)
+vif(model2)
+```
+**Nhận xét**   
+
+- Ở mô hình 1, có hiện tượng đa cộng tuyến xảy ra, mạnh nhất ở biến "Likes" (GVIF = 6.870104) nên ta loại biến "Likes" ra khỏi mô hình   
+- Ở mô hình 2, các giá trị GVIF đều nhỏ hơn 5, có thể xảy ra hiện tượng đa cộng tuyến nhưng không nghiêm trọng lắm nên ta dừng kiểm tra hiện tượng đa cộng tuyến   
+
+### Xây dựng mô hình bằng phương pháp hồi quy bội   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(model2)
+model3 = lm(Gross~Ratings + Budget + Screens + Aggregate.Followers + Sequel, 
+            data = trainingData)
+```
+
+**Nhận xét**   
+
+- Các biến "Ratings", "Budget", "Screens", "Aggregate.Followers", "Sequel2" có ý nghĩa thống kê (Pr< 0.05) ở mức $\alpha = 5$% nên ta giữ lại để xây dựng mô hình.   
+- Các biến còn lại không có ý nghĩa thống kê nên ta loại khỏi mô hình.   
+
+### So sánh mô hình xây dựng với mô hình tạo bằng phương pháp Stepswise 
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+comparisonModel = stepAIC(model, direction = "both",trace = FALSE)
+anova(model3, comparisonModel)
+summary(comparisonModel)
+```
+
+**Nhận xét**   
+
+- Mô hình xây dựng từ hai cách giống nhau   
+- Adjusted R-squared = 63.81% => giải thích được 63.81% sự phụ thuộc của biến "Gross" vào các biến "Ratings", "Budget", "Screens", "Aggregate.Followers", "Sequel2"   
+- Sự phụ thuộc của các biến tỉ lệ như sau:   
+     Gross = -0.07895 + 0.22645\*(Ratings) + 0.44619\*(Budget) + 0.21711\*(Screens) + 0.09588\*(Aggregate.Followers) + 0.31512\*(Sequel2) + 1.39480\*(Sequel7)    
+     
+**Diễn giải**   
+
+- Tổng doanh thu (Gross) phụ thuộc vào Điểm đánh giá, Tổng chi phí, Số lượng rạp chiếu, Số người theo dõi, Phần phim sẽ chiếu   
+- Khi Điểm đánh giá tăng 1 đơn vị thì tổng doanh thu tăng 0.22645\*(Ratings) đơn vị   
+- Khi Tổng chi phí tăng 1 đơn vị thì tổng doanh thu tăng 0.44619\*(Budget) đơn vị   
+- Khi số lượng rạp chiếu tăng 1 đơn vị thì tổng doanh thu tăng 0.21711\*(Screens) đơn vị   
+- Khi số lượng người theo dõi tăng 1 người thì tổng doanh thu tăng 0.09588\*(Aggregate.Followers) đơn vị  
+- Khi phần phim sẽ chiếu là 2 hoặc 7 thì tổng doanh thu tăng tương ứng là 0.31512\*(Sequel2), 1.39480\*(Sequel7) đơn vị   
+
+\newpage
+### Kiểm tra giả thiết tuyến tính của dữ liệu và giả thiết phần dư có trung bình bằng 0   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(model3, 1)
+```
+
+**Nhận xét**  
+
+- Đồ thị cho thấy giả thiết về tính tuyển tính của dữ liệu hơi bị vi phạm. Tuy nhiên giả thiết trung bình của phần dư có thể coi là thỏa mãn      
+
+\newpage
+### Kiểm tra phần dư có phân phối chuẩn    
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+residus = residuals(model3)
+shapiro.test(residus)
+
+plot(model3, 2)
+```
+
+**Nhận xét**  
+
+- Từ đồ thị và kiểm định Shapiro Wilk (p-value = 2.371e-10 < 0.05) cho thấy phần dư không tuân theo theo phân phối chuẩn  
+
+\newpage
+### Kiểm định giả thiết phương sai của phần dư không đổi
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(model3, 3)
+```
+
+**Nhận xét**  
+
+- Từ đồ thị ta thấy phương sai của phần dư có thay đổi  
+
+\newpage
+### Kiểm tra sự ảnh hưởng của dữ liệu
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(model3, 5)
+```
+
+**Nhận xét**  
+
+- Từ đồ thị ta thấy quan sát 11, 167, 164 có thể là các quan sát có ảnh hưởng cao trong bộ dữ liệu   
+
+\newpage
+## DỰ BÁO   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+validationData = validationData[-which(!(validationData$Sequel %in% unique(trainingData$Sequel))),]
+trainingData = trainingData[-which(!(trainingData$Sequel %in% unique(validationData$Sequel))),]
+
+predictions =  predict(model3, validationData)
+rmse = RMSE(predictions, validationData$Gross)
+r2 = R2(predictions, validationData$Gross)
+
+plot(validationData$Gross, predictions, xlab = "Actual", ylab = "Prediction", 
+     main = "Actual and Prediction comparison plot")
+abline(0, 1, col = "red")
+```
+
+**Nhận xét**  
+
+- Độ lệch trung bình giữa các giá trị dự đoán và các giá trị thực tế là RMSE = `r rmse`   
+- R2 = `r r2` cho biết `r round(r2*100, 2)`% biến thiên của biến phụ thuộc có thể được giải thích bởi các biến độc lập được sử dụng trong mô hình. Từ đây cho thấy mô hình phù hợp chặt chẽ với dữ liệu.   
+- Qua đồ thị ta thấy, mô hình dự báo không có quá nhiều sai lệch  

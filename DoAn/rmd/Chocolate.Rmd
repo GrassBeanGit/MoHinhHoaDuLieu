@@ -1,0 +1,182 @@
+---
+title: "Chocolate"
+author: "Thanh Thảo - Bích Trâm"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# Bộ dữ liệu: CHOCOLATE ==========  
+
+## MÔ TẢ DỮ LIỆU  
+Sô cô la là một trong những loại kẹo phổ biến nhất trên thế giới. Mỗi năm, cư dân Hoa Kỳ ăn tổng cộng hơn 2,8 tỷ pound. Tuy nhiên, không phải tất cả các thanh sô cô la đều được tạo ra như nhau. Bộ dữ liệu này chứa xếp hạng của chuyên gia đối với hơn 1.700 thanh sô cô la riêng lẻ, cùng với thông tin về nguồn gốc khu vực, tỷ lệ ca cao, loại hạt sô cô la được sử dụng và nơi trồng hạt.  
+
+- "CompanyMaker": tên công ty sản xuất  
+- "SpecificBeanOrigin": Xuất xứ  
+- "REF": giá trị liên kết với thời điểm đánh giá, cao hơn là gần đây hơn  
+- "ReviewDate": ngày công bố đánh giá  
+- "CocoaPercent": tỉ lệ ca cao  
+- "CompanyLocation": quốc gia công ty sản xuất  
+- "Rating": đánh giá của chuyên gia  
+- "BeanType": loại hạt  
+- "BroadBeanOrigin": nguồn gốc hạt  
+
+## YÊU CẦU  
+- Kiểm tra tỉ lệ ca cao (CocoaPercent) và quốc gia sản xuất (CompanyLocaion) có ảnh hướng đến đánh giá của chuyên gia không (Rating)  
+
+\newpage
+## ĐỌC DỮ LIỆU   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+chocolateOrgData = docDuLieu("data","Chocolate.csv")
+
+chocolateOrgData = rename(chocolateOrgData,c('CompanyMaker'='Company...Maker.if.known.'))
+chocolateOrgData = rename(chocolateOrgData,
+                          c('SpecificBeanOrigin'='Specific.Bean.Origin.or.Bar.Name'))
+chocolateOrgData = rename(chocolateOrgData,c('ReviewDate'='Review.Date'))
+chocolateOrgData = rename(chocolateOrgData,c('CocoaPercent'='Cocoa.Percent'))
+chocolateOrgData = rename(chocolateOrgData,c('CompanyLocation'='Company.Location'))
+chocolateOrgData = rename(chocolateOrgData,c('BeanType'='Bean.Type'))
+chocolateOrgData = rename(chocolateOrgData,c('BroadBeanOrigin'='Broad.Bean.Origin'))
+```
+
+## TIỀN XỬ LÝ DỮ LIỆU   
+### Loại bỏ dữ liệu trùng  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+isTRUE(duplicated(chocolateOrgData))
+```
+**Nhận xét**  
+
+- Không có dữ liệu trùng  
+
+### Loại bỏ biến không có giá trị phân tích   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(chocolateOrgData)
+chocolateData = chocolateOrgData[,c(5, 6, 7)]
+```
+
+**Nhận xét**   
+
+- Do bài toán cần 3 biến "CocoaPercent", "CompanyLocaion", "Rating" để đánh giá nên ta giữ lại 3 biến này. Trong đó, "Rating" là biến phụ thuộc, "CocoaPercent", "CompanyLocaion" là biến độc lập   
+
+### Chuyển đổi kiểu dữ liệu   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+str(chocolateData)
+
+chocolateData$CocoaPercent = sub("%", "", chocolateData$CocoaPercent)
+arrange(tabyl(chocolateData$CocoaPercent), desc(percent))
+chocolateData$CocoaPercent = case_when(
+                                         chocolateData$CocoaPercent == 70 ~ 70,
+                                         chocolateData$CocoaPercent == 75 ~ 75,
+                                         chocolateData$CocoaPercent == 72 ~ 72,
+                                         TRUE ~ 65)
+chocolateData$CocoaPercent = as.factor(chocolateData$CocoaPercent)
+
+arrange(tabyl(chocolateData$CompanyLocation), desc(percent))
+chocolateData$CompanyLocation = case_when(
+                                         chocolateData$CompanyLocation == 'U.S.A.' ~ 1,
+                                         chocolateData$CompanyLocation == 'France' ~ 2,
+                                         chocolateData$CompanyLocation == 'Canada' ~ 3,
+                                         TRUE ~ 4)
+chocolateData$CompanyLocation = as.factor(chocolateData$CompanyLocation)
+```
+
+**Nhận xét**   
+
+- Biến "CocoaPercent" đang lưu trữ dạng ký tự và do số lượng giá trị phân biệt khá lớn nên ta chuyển về dạng factor. Với những dữ liệu có phần trăm ca cao bằng 70, 72, 75, do phần trăm dữ liệu của 3 loại này khá cao so với các loại khác nên ta giữ nguyên giá trị, các dữ liệu còn lại ta thay bằng giá trị 65 để phân loại   
+- Biến "CompanyLocation" đang lưu trữ dạng ký tự và do số lượng giá trị phân biệt khá lớn nên ta chuyển về dạng factor. Với những dữ liệu là "U.S.A.", "France", "Canada", do phần trăm dữ liệu của 3 loại này cao nhất so với các loại khác nên ta thay lần lượt bởi các giá trị 1, 2, 3 và những dữ liệu còn lại ta thay bằng 4 để phân loại   
+
+### Loại bỏ dữ liệu khuyết   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+anyNA(chocolateData)
+```
+
+**Nhận xét**   
+
+- Không có dữ liệu khuyết   
+
+\newpage
+### Kiểm tra phần dư
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model = aov(Rating ~ ., data = chocolateData)
+aovResidual = rstandard(model)
+shapiro.test(aovResidual)
+
+plot(model, 2)
+```
+
+**Nhận xét**   
+
+- Từ biểu đồ và kiểm định Shapiro-Wilk (p_value < 2.2e-16), ta thấy phần dư không có phân phối chuẩn   
+
+\newpage
+### Loại bỏ outlier
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+boxplot(chocolateData)
+
+ratingOutlierFrame = subset(chocolateData, Rating < 2 | Rating > 4)
+ratingOutlierDataIndex = as.numeric(rownames(ratingOutlierFrame))
+duplicatedOutlierAmount = length(ratingOutlierDataIndex)
+duplicatedOutlierPercentage = round(duplicatedOutlierAmount/dim(chocolateData)[1]*100, 2)
+```
+
+**Nhận xét**   
+
+- Qua biểu đồ hộp, ta thấy biến "CocoaPercent", "Rating" có outlier   
+- Biến "Rating" có `r duplicatedOutlierAmount` dòng có outlier, chiếm 
+`r duplicatedOutlierPercentage`% dữ liệu   
+- Các dòng cần loại khỏi bộ dữ liệu là: `r ratingOutlierDataIndex`  
+
+\newpage
+### Kiểm tra tương tác dữ liệu    
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+with(chocolateData, interaction.plot(CocoaPercent, CompanyLocation, Rating, lwd = 2, col = 2:9))
+with(chocolateData, interaction.plot(CompanyLocation, CocoaPercent, Rating, lwd = 2, col = 2:9))
+```
+
+**Nhận xét**   
+
+- Từ hai biểu đồ ta thấy, nhân tố "CompanyLocation" và nhân tố "CocoaPercent" đều có tương tác lẫn nhau   
+
+\newpage
+## XÂY DỰNG MÔ HÌNH   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+str(chocolateData)
+model = aov(Rating ~ CocoaPercent * CompanyLocation, data = chocolateData)
+summary(model)
+
+TukeyHSD(model)
+```
+
+\newpage
+**Nhận xét**   
+
+Từ bảng anova, ta thấy:   
+
+- Ở mức ý nghĩa 5%, nếu xét từng nhân tố thì cả 2 nhân tố "CocoaPercent" và "CompanyLocation" đều có ý nghĩa thống kê do p_value tương ứng lần lượt là 3.48e-10, 0.000669 đều nhỏ hơn 0.05. Nghĩa là có sự khác biệt về đánh giá của chuyên gia ("Rating") đối với chocolate có tỉ lệ ca cao khác nhau ("CocoaPercent"), quốc giá công ty sản xuất ("CompanyLocation")   
+- Ở mức ý nghĩa 5%, nếu xét cả 2 nhân tố thì ta thấy có sự tương tác lẫn nhau giữa nhân tố "CocoaPercent" và "CompanyLocation" (p_value = 0.013605 < 0.05). Và có 11 cặp tương tác có ý nghĩa như bên dưới:   
+70:1-65:1; 70:3-65:1; 70:4-65:1; 65:4-70:1; 70:3-72:1; 70:3-75:1; 70:3-72:2; 65:4-70:3; 75:4-70:3; 70:4-65:4; 72:4-65:4   
+
+**Diễn giải**   
+
+- 70:4-72:1 có nghĩa là điểm đánh giá của chuyên gia (Rating) cho chocolate có phần trăm ca cao bằng 70 (CocoaPercent) sản xuất ở các nước không phải là "USA", "France", "Canada" khác với chocolate có phần trăm ca cao bằng 72 sản xuất ở "USA"   
+=> Ta cần phân tích hồi quy để tìm ra sự ảnh hưởng của phần trăm ca cao có trong chocolate (CocoaPercent), nước sản xuất (CompanyLocation) đến điểm đánh giá của chuyên gia (Rating)   
+
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(lm(Rating ~ CocoaPercent + CompanyLocation, data = chocolateData))
+```
+
+\newpage
+**Nhận xét**   
+
+- Do biến "CocoaPercent75", "CompanyLocation4" có p_value > 0.05, không có ý nghĩa thống kê nên ta không đưa vào mô hình.   
+- Từ thống kê mô tả, ta có mô hình hồi quy tuyến tính sau:   
+Rating = 3.06904 + 0.17323\*(CocoaPercent70) + 0.09311\*(CocoaPercent72) + 0.12202\*(CompanyLocation2) + 0.15288\*(CompanyLocation3)   
+
+**Diễn giải**   
+
+- Điểm đánh giá của chuyên gia phụ thuộc vào phần trăm ca cao có trong chocolate là 70% hay 72% và nước sản xuất là "France" hay "Canada"   
+- Khi chocolate có "70%" ca cao thì điểm đánh giá tăng 0.17323 đơn vị  
+- Khi chocolate có "72%" ca cao thì điểm đánh giá tăng 0.09311 đơn vị  
+- Khi nước sản xuất là "France" thì điểm đánh giá tăng 0.12202 đơn vị  
+- Khi nước sản xuất là "Canada" thì điểm đánh giá tăng 0.15288 đơn vị  

@@ -6,10 +6,16 @@ output:
     latex_engine: xelatex
 ---
 
-# ĐỖ THỊ THANH THẢO - 23C23009   
-- Làm bộ dữ liệu: Csm, Fish Market, Chocolate Bar Rating
-- Tổng hợp báo cáo
+\newpage
+# PHÂN CÔNG VIỆC   
+1. ĐỖ THỊ THANH THẢO - 23C23009   
 
-# NGUYỄN BÍCH TRÂM - 23c23010   
-- Làm bộ dữ liệu: IslanderOrg, Heart Disease, Chocolate Bar Rating
-- Tìm dữ liệu
+- Làm bộ dữ liệu: Csm, Fish Market, Chocolate Bar Rating  
+- Tổng hợp báo cáo  
+- Hoàn thành: 100%  
+   
+
+2. NGUYỄN BÍCH TRÂM - 23c23010   
+
+- Làm bộ dữ liệu: IslanderOrg, Heart Disease, Chocolate Bar Rating   
+- Tìm dữ liệu   

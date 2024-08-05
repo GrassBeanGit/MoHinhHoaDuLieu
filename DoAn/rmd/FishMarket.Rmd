@@ -1,0 +1,264 @@
+---
+title: "Fish Market"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# Bộ dữ liệu: FISH MARKET ==========
+
+## MÔ TẢ DỮ LIỆU  
+Bộ dữ liệu thị trường cá là tập hợp dữ liệu liên quan đến nhiều loài cá và đặc điểm của chúng. Sau đây là mô tả về từng cột trong bộ dữ liệu:  
+
+- Loài: Cột này biểu thị loài cá. Đây là biến phân loại phân loại từng loài cá thành một trong bảy loài. Các loài có thể bao gồm tên như "Perch," "Bream," "Roach," "Pike," "Smelt," "Parkki," and "Whitefish"  
+- Trọng lượng: Cột này biểu thị trọng lượng của cá. Đây là biến số thường được đo bằng gam.  
+- Chiều dài1: Cột này biểu thị phép đo đầu tiên về chiều dài của cá. Đây là biến số, thường được đo bằng cm.  
+- Chiều dài2: Cột này biểu thị phép đo thứ hai về chiều dài của cá. Đây là biến số, thường được đo bằng cm.  
+- Chiều dài 3: Cột này biểu thị phép đo thứ ba về chiều dài của cá. Đây là biến số, thường được đo bằng cm.  
+- Chiều cao: Cột này biểu thị chiều cao của cá. Đây là biến số, thường được đo bằng cm.  
+- Chiều rộng: Cột này biểu thị chiều rộng của cá. Đây là biến số, thường được đo bằng cm.   
+
+## YÊU CẦU   
+
+- Dự đoán trọng lượng của một con cá dựa trên loài của nó và các phép đo vật lý được cung cấp.  
+
+\newpage
+## ĐỌC DỮ LIỆU
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+fishMarketOrg = docDuLieu("data","FishMarket.csv")
+```
+
+## TIỀN XỬ LÝ DỮ LIỆU
+### Loại bỏ dữ liệu trùng
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+isTRUE(duplicated(fishMarketOrg))
+```
+
+**Nhận xét**     
+
+- Không có dữ liệu trùng  
+
+### Loại bỏ biến không có giá trị phân tích
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(fishMarketOrg)
+```
+
+**Nhận xét**   
+
+- Không có biến nào cần loại ra khỏi bộ dữ liệu   
+
+### Thay thế dữ liệu bất thường
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+fishMarketOrg$Weight = replace(fishMarketOrg$Weight, fishMarketOrg$Weight == 0, 
+                               median(fishMarketOrg$Weight))
+```
+
+**Nhận xét**   
+
+- Biến "Weight" có dữ liệu bất thường (Min = 0.0) => để không ảnh hưởng đến phân bố dữ liệu, ta thay đổi giá trị 0.0 bằng giá trị của Median    
+
+### Chuyển đổi kiểu dữ liệu
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+str(fishMarketOrg)
+
+fishMarketOrg$Species = as.factor(fishMarketOrg$Species)
+```
+
+**Nhận xét**   
+
+- Biến "Species" (loài) là biến định tính => ta chuyển sang dạng factor   
+
+### Loại bỏ dữ liệu khuyết
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+anyNA(fishMarketOrg)
+```
+
+**Nhận xét**   
+
+- Không có dữ liệu khuyết   
+
+### Quy tâm dữ liệu
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+fishMarketQuantitativeData = fishMarketOrg[,-1]
+boxplot(fishMarketQuantitativeData)
+apply(fishMarketQuantitativeData, 2, mean)
+apply(fishMarketQuantitativeData, 2, sd)
+apply(fishMarketQuantitativeData, 2, range)
+
+fishMarketStdData = as.data.frame(scale(fishMarketQuantitativeData, scale = TRUE))
+```
+
+**Nhận xét**  
+
+- Từ BoxPlot, ta thấy range của biến "Weight" khá lớn so với các biến khác   
+- Trung bình, độ lệch chuẩn của các biến không tương đồng. Do đó, ta cần quy tâm dữ liệu. Đưa dữ liệu có trung bình   của biến về 0, phương sai về 1  
+
+### Loại bỏ outlier  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+boxplot(fishMarketStdData)
+
+outlierIndexList = list()
+for(i in 1:length(fishMarketStdData)){
+  quantitleValue = quantile(fishMarketStdData[[i]])
+  upperValue = quantitleValue[4] + (quantitleValue[4]-quantitleValue[2])*1.5
+  
+  outlierIndexList = append(outlierIndexList, which(fishMarketStdData[i] > upperValue))
+}
+
+duplicatedOutlierIndex = unique(outlierIndexList)
+duplicatedOutlierAmount = length(duplicatedOutlierIndex)
+duplicatedOutlierPercentage = round(duplicatedOutlierAmount/dim(fishMarketStdData)[1]*100, 2)
+
+fishMarketFinalData = data.frame(fishMarketStdData, 
+                                 fishMarketOrg[,1])[c(-unlist(duplicatedOutlierIndex)), ]
+fishMarketFinalData = rename(fishMarketFinalData,c('Species'='fishMarketOrg...1.'))
+```
+
+**Nhận xét**  
+
+- Sau khi quy tâm dữ liệu, ta thấy biến "Weight", "Length1", "Length2", "Length3" có outlier   
+- Có tổng cộng `r duplicatedOutlierAmount` dòng mà một trong các biến trên cùng có outlier, chiếm `r duplicatedOutlierPercentage`% dữ liệu   
+- Các dòng cần loại khỏi bộ dữ liệu là: `r duplicatedOutlierIndex`  
+
+## CHIA DỮ LIỆU
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+set.seed(1234)
+trainingSamples = fishMarketFinalData$Weight  %>%  createDataPartition(p = 0.8, list = FALSE)
+trainingData  = fishMarketFinalData[trainingSamples, ]
+validationData = fishMarketFinalData[-trainingSamples, ]
+```
+
+\newpage
+## XÂY DỰNG MÔ HÌNH
+### Kiểm tra tương quan
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+cor(trainingData[,1:6])
+corrplot.mixed(cor(trainingData[,1:6]), order = 'AOE')
+```
+
+**Nhận xét**   
+
+- Các biến có mối tương quan rất mạnh với nhau   
+=> cần kiểm tra các biến có xảy ra hiện tượng đa cộng tuyến không   
+
+\newpage
+### Kiểm tra đa cộng tuyến
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+model = lm(Weight~., data = trainingData)
+vif(model)
+
+model2 = lm(Weight~. -Length2, data = trainingData)
+vif(model2)
+
+model3 = lm(Weight~. -Length2 -Length3, data = trainingData)
+vif(model3)
+
+model4 = lm(Weight~. -Length2 -Length3 - Species, data = trainingData)
+vif(model4)
+
+model5 = lm(Weight~. -Length2 -Length3 - Species - Width, data = trainingData)
+vif(model5)
+```
+
+**Nhận xét**   
+
+- Ở mô hình 1, ta thấy các giá trị GVIF đều rất lớn (>10) nên chắc chắn xảy ra hiện tượng đa cộng tuyến. Biến "Length2" có GVIF lớn nhất nên ta loại biến "Length2" ra khỏi mô hình   
+- Ở mô hình 2, ta thấy các giá trị GVIF đều rất lớn (>10) nên chắc chắn xảy ra hiện tượng đa cộng tuyến. Biến "Length3" có GVIF lớn nhất nên ta tiếp tục loại biến "Length3" ra khỏi mô hình  
+- Ở mô hình 3, ta thấy các giá trị GVIF đều rất lớn (>10) nên chắc chắn xảy ra hiện tượng đa cộng tuyến. Biến "Spices" có GVIF lớn nhất nên ta tiếp tục loại biến "Spices" ra khỏi mô hình  
+- Ở mô hình 4, ta thấy giá trị GVIF của biến "Width" lớn hơn 5 và nhỏ hơn 10, có thể xảy ra hiện tượng đa cộng tuyến. Ta loại tiếp biến "Width" ra khỏi mô hình   
+- Ở mô hình 5, ta thấy các giá trị GVIF đều nhỏ hơn 2, ta dừng kiểm tra hiện tượng đa cộng tuyến  
+
+\newpage
+### Xây dựng mô hình bằng phương pháp hồi quy bội   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+summary(model5)
+finalModel = lm(Weight ~ Length1 + Height, data = trainingData)
+```
+
+**Nhận xét**   
+
+- Các biến "Length1", "Height" có ý nghĩa thống kê (Pr< 0.05) ở mức $\alpha = 5$% nên ta giữ lại để xây dựng mô hình.   
+
+### So sánh mô hình xây dựng với mô hình tạo bằng phương pháp Stepswise
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+comparisonModel = stepAIC(model, direction = "both",trace = FALSE)
+anova(model5, comparisonModel)
+summary(comparisonModel)
+```
+**Nhận xét**   
+
+- Mô hình 2 hiệu quả hơn mô hình 1 do Pr < 2.2e-16 nên ta chọn mô hình 2   
+- Adjusted R-squared = 95.35% => giải thích được 95.35% sự phụ thuộc của biến "Weight" vào các biến "Length2", "Height", "Width", "SpeciesSmelt", "SpeciesWhitefish"   
+- Sự phụ thuộc của các biến tỉ lệ như sau:   
+     Weight = -0.3386 + 1.7246\*(Length2) + 0.5844\*(Height) + 0.2492\*(Width) + 1.2263\*(SpeciesSmelt) + 0.4659\*(SpeciesWhitefish)    
+     
+**Diễn giải**   
+
+- Trọng lượng cá phụ thuộc vào chiều dài 2, chiều cao, chiều rộng, loài cá là "Smelt" hay "Whitefish"   
+- Khi chiều dài cá tăng 1 đơn vị thì trọng lượng cá tăng 1.7246\*(Length2) đơn vị   
+- Khi chiều cao cá tăng 1 đơn vị thì trọng lượng cá tăng 0.5844\*(Height) đơn vị   
+- Khi chiều rộng cá tăng 1 đơn vị thì trọng lượng cá tăng 0.2492\*(Width) đơn vị   
+- Khi loài cá là "Smelt" thì trọng lượng cá tăng 1.2263\*(SpeciesSmelt) đơn vị   
+- Khi loài cá là "SpeciesWhitefish" thì trọng lượng cá tăng 0.4659\*(SpeciesWhitefish)      
+
+\newpage
+### Kiểm tra giả thiết tuyến tính của dữ liệu và giả thiết phần dư có trung bình bằng 0    
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(comparisonModel, 1)
+```
+
+**Nhận xét**    
+
+- Đồ thị cho thấy giả thiết về tính tuyển tính của dữ liệu hơi bị vi phạm. Tuy nhiên giả thiết trung bình của phần dư có thể coi là thỏa mãn    
+
+\newpage
+### Kiểm tra phần dư có phân phối chuẩn   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+residus = residuals(comparisonModel)
+shapiro.test(residus)
+
+plot(comparisonModel, 2)
+```
+
+**Nhận xét**    
+
+- Từ đồ thị và kiểm định Shapiro Wilk (p-value = 0.005243 < 0.05) cho thấy phần dư không tuân theo theo phân phối chuẩn  
+
+\newpage
+### Kiểm định giả thiết phương sai của phần dư không đổi  
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(comparisonModel, 3)
+```
+
+**Nhận xét**  
+
+- Từ đồ thị ta thấy phương sai của phần dư có thay đổi   
+
+\newpage
+### Kiểm tra sự ảnh hưởng của dữ liệu    
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+plot(comparisonModel, 5)
+```
+
+**Nhận xét**   
+
+- Từ đồ thị ta thấy quan sát 142, 61, 57 có thể là các quan sát có ảnh hưởng cao trong bộ dữ liệu   
+
+\newpage
+## DỰ BÁO   
+```{r include = TRUE, echo = TRUE, eval = TRUE}
+predictions =  predict(comparisonModel, validationData)
+rmse = RMSE(predictions, validationData$Weight)
+r2 = R2(predictions, validationData$Weight)
+
+plot(validationData$Weight, predictions, xlab = "Actual", ylab = "Prediction",
+     main = "Actual and Prediction comparison plot")
+abline(0, 1, col = "red")
+```
+
+**Nhận xét**   
+
+- Độ lệch trung bình giữa các giá trị dự đoán và các giá trị thực tế là RMSE = `r rmse`   
+- R2 = `r r2` cho biết `r round(r2*100, 2)`% biến thiên của biến phụ thuộc có thể được giải thích bởi các biến độc lập được sử dụng trong mô hình. Từ đây cho thấy mô hình phù hợp chặt chẽ với dữ liệu.   
+- Qua đồ thị ta thấy, mô hình dự báo không có quá nhiều sai lệch   

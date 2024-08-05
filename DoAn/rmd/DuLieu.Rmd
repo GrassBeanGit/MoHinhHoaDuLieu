@@ -1,0 +1,12 @@
+---
+title: "Dữ liệu"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+\newpage
+# DỮ LIỆU
+- https://archive.ics.uci.edu/dataset/45/heart+disease  
+- https://www.kaggle.com/datasets/rtatman/chocolate-bar-ratings/data  
+- https://www.kaggle.com/datasets/vipullrathod/fish-market  

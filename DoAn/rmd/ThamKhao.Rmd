@@ -5,4 +5,20 @@ output:
     latex_engine: xelatex
 ---
 
+\newpage
 # THAM KHẢO   
+- Làm sạch dữ liệu: https://bigdatauni.com/tin-tuc/data-cleaning-lam-sach-du-lieu-xu-ly-missing-values-p2.html   
+- Xử lý dữ liệu khuyết: https://www.youtube.com/watch?v=2XcMzpeHNZU    
+- Tìm giá trị khuyết: https://rpubs.com/nlxbach/540930   
+- Hồi quy bội: https://rpubs.com/TKUD/810985    
+- Dummy variable: https://www.youtube.com/watch?v=2s8AwoKZ-UE   
+- Hồi quy đa biến: https://www.youtube.com/watch?v=-hYhY_IriuQ    
+- PCA: https://www.youtube.com/watch?v=tNw9yHrqFl8&t=5795s   
+- Tứ phân vị: https://phantichspss.com/cach-doc-bieu-do-hop-boxplot.html   
+- Box cox: https://www.r-bloggers.com/2022/10/box-cox-transformation-in-r/  
+- Thống kê mô tả: https://rpubs.com/R_stats/917311  
+
+# LINK LẤY DỮ LIỆU
+- https://archive.ics.uci.edu/dataset/45/heart+disease  
+- https://www.kaggle.com/datasets/rtatman/chocolate-bar-ratings/data  
+- https://www.kaggle.com/datasets/vipullrathod/fish-market  

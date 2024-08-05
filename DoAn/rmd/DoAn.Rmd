@@ -8,6 +8,7 @@ output:
   pdf_document: 
     latex_engine: xelatex
     toc: true
+    toc_depth: 4
     highlight: zenburn
   bookdown::pdf_document2:
     toc: yes
@@ -31,8 +32,12 @@ library(corrplot)
 library(car)
 library(knitr)
 library(readxl)
-library("tools")
-
+library(tools)
+library(visdat)
+library(naniar)
+library(dplyr)
+library(VIM)
+library(janitor)
 
 opts_chunk$set(tidy.opts=list(width.cutoff=70),tidy=FALSE) 
 
@@ -40,11 +45,21 @@ source(file = here("lib","Utils.R"))
 
 ```
 
-```{r child = file.path(here(), "rmd", "AutoMpgUpdate1.Rmd")}
+```{r child = file.path(here(), "rmd", "PhanCong.Rmd")}
 ```
 
-```{r child = file.path(here(), "rmd", "BaoHiem.Rmd")}
+```{r child = file.path(here(), "rmd", "Chocolate.Rmd")}
+```
+
+```{r child = file.path(here(), "rmd", "FishMarket.Rmd")}
 ```
 
 ```{r child = file.path(here(), "rmd", "Csm.Rmd")}
 ```
+
+```{r child = file.path(here(), "rmd", "DuLieu.Rmd")}
+```
+
+```{r child = file.path(here(), "rmd", "ThamKhao.Rmd")}
+```
+
